@@ -549,122 +549,164 @@
         <p>সকল অধিকার সংরক্ষিত © ২০২৫</p>
     </footer>
     
-    <script>
-        // Navigation Functionality with Smooth Scrolling
-        function navigate(pageId) {
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
-            const targetPage = document.getElementById(pageId);
-            targetPage.classList.add('active');
-            targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+<script>
+    // Navigation Functionality with Smooth Scrolling
+    function navigate(pageId) {
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        const targetPage = document.getElementById(pageId);
+        targetPage.classList.add('active');
+        targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
-        // Report Form Handling
-        document.getElementById('reportForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+    // Report Form Handling - IMPROVED VERSION
+    document.getElementById('reportForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+        const description = document.getElementById('description').value;
+        
+        if (!description) {
+            alert('Please fill in the incident description');
+            return;
+        }
+        
+        try {
+            // Show loading state
+            const submitBtn = this.querySelector('.submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
             
-            const name = document.getElementById('name').value;
-            const phone = document.getElementById('phone').value;
-            const description = document.getElementById('description').value;
+            // Debug log
+            console.log("Attempting to submit report to Firestore");
             
-            if (!description) {
-                alert('ঘটনার বিবরণ পূরণ করুন');
+            // Add report to Firestore
+            const docRef = await db.collection("reports").add({
+                name: name || 'Anonymous',
+                phone: phone || 'Not provided',
+                description,
+                date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            console.log("Report submitted with ID: ", docRef.id);
+            
+            // Reset form and show success
+            this.reset();
+            alert('Report submitted successfully!');
+        } catch (error) {
+            console.error("Full error details:", error);
+            alert(`Failed to submit report. Error: ${error.message}\n\nCheck console for details`);
+        } finally {
+            // Reset button state
+            const submitBtn = this.querySelector('.submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Report';
+            }
+        }
+    });
+
+    // Admin Login - IMPROVED VERSION
+    document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        
+        if (username === 'durgoadmin' && password === 'everyonebesupporter') {
+            try {
+                // Show loading state
+                const loginBtn = this.querySelector('.submit-btn');
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Logging in...';
+                
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                
+                console.log("Attempting to load reports...");
+                await loadReports();
+            } catch (error) {
+                console.error("Login error details:", error);
+                alert('Login failed. Check console for error details');
+            } finally {
+                const loginBtn = this.querySelector('.submit-btn');
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Login';
+                }
+            }
+        } else {
+            alert('Invalid username or password!');
+        }
+    });
+    
+    // Load Reports from Firebase - IMPROVED VERSION
+    async function loadReports() {
+        const reportsList = document.getElementById('reportsList');
+        reportsList.innerHTML = '<p>Loading reports...</p>';
+        
+        try {
+            console.log("Fetching reports from Firestore...");
+            const snapshot = await db.collection("reports")
+                .orderBy("date", "desc")
+                .get();
+            
+            console.log(`Found ${snapshot.size} reports`);
+            
+            if (snapshot.empty) {
+                reportsList.innerHTML = '<p>No reports found</p>';
                 return;
             }
             
-            try {
-                await db.collection("reports").add({
-                    name: name || 'Anonymous',
-                    phone: phone || 'Not provided',
-                    description,
-                    date: firebase.firestore.FieldValue.serverTimestamp() // Use server timestamp
-                });
+            reportsList.innerHTML = '';
+            
+            snapshot.forEach(doc => {
+                const report = doc.data();
+                console.log("Processing report:", doc.id, report);
                 
-                this.reset();
-                alert('আপনার রিপোর্ট সফলভাবে জমা হয়েছে। ধন্যবাদ!');
-            } catch (error) {
-                console.error("Error saving report:", error);
-                alert('রিপোর্ট জমা দিতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।');
-            }
-        });
+                const reportDate = report.date ? 
+                    new Date(report.date.seconds * 1000).toLocaleString('bn-BD') : 
+                    'Date not available';
+                
+                const reportItem = document.createElement('div');
+                reportItem.className = 'report-item';
+                reportItem.innerHTML = `
+                    <div class="report-meta">
+                        <span>${report.name}</span>
+                        <span>${reportDate}</span>
+                    </div>
+                    <div class="report-meta">
+                        <span>Phone: ${report.phone}</span>
+                    </div>
+                    <div class="report-content">
+                        <p>${report.description}</p>
+                    </div>
+                `;
+                reportsList.appendChild(reportItem);
+            });
+        } catch (error) {
+            console.error("Error loading reports:", error);
+            reportsList.innerHTML = `
+                <p>Error loading reports</p>
+                <p style="color: red">${error.message}</p>
+            `;
+        }
+    }
+    
+    function logout() {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('adminPanel').style.display = 'none';
+        document.getElementById('adminLoginForm').reset();
+    }
+    
+    // Initialize - show home page
+    navigate('home');
 
-        // Admin Login
-        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            if (username === 'durgoadmin' && password === 'everyonebesupporter') {
-                try {
-                    document.getElementById('loginForm').style.display = 'none';
-                    document.getElementById('adminPanel').style.display = 'block';
-                    await loadReports();
-                } catch (error) {
-                    console.error("Error loading reports:", error);
-                    alert('রিপোর্ট লোড করতে সমস্যা হয়েছে');
-                }
-            } else {
-                alert('ভুল ব্যবহারকারীর নাম বা পাসওয়ার্ড!');
-            }
-        });
-        
-        // Load Reports from Firebase
-        async function loadReports() {
-            const reportsList = document.getElementById('reportsList');
-            reportsList.innerHTML = '<p>রিপোর্ট লোড হচ্ছে...</p>';
-            
-            try {
-                const snapshot = await db.collection("reports")
-                    .orderBy("date", "desc")
-                    .get();
-                
-                if (snapshot.empty) {
-                    reportsList.innerHTML = '<p>কোনো রিপোর্ট পাওয়া যায়নি</p>';
-                    return;
-                }
-                
-                reportsList.innerHTML = '';
-                
-                snapshot.forEach(doc => {
-                    const report = doc.data();
-                    const reportItem = document.createElement('div');
-                    reportItem.className = 'report-item';
-                    
-                    // Format the date properly
-                    const reportDate = report.date ? 
-                        new Date(report.date.seconds * 1000).toLocaleString('bn-BD') : 
-                        'তারিখ নেই';
-                    
-                    reportItem.innerHTML = `
-                        <div class="report-meta">
-                            <span>${report.name}</span>
-                            <span>${reportDate}</span>
-                        </div>
-                        <div class="report-meta">
-                            <span>ফোন: ${report.phone}</span>
-                        </div>
-                        <div class="report-content">
-                            <p>${report.description}</p>
-                        </div>
-                    `;
-                    reportsList.appendChild(reportItem);
-                });
-            } catch (error) {
-                console.error("Error loading reports:", error);
-                reportsList.innerHTML = '<p>রিপোর্ট লোড করতে ব্যর্থ হয়েছে</p>';
-            }
-        }
-        
-        function logout() {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('adminLoginForm').reset();
-        }
-        
-        // Initialize - show home page
-        navigate('home');
-    </script>
+    // Debugging: Verify Firebase initialization
+    console.log("Firebase initialized successfully:", firebase.app().name);
+    console.log("Firestore instance available:", !!db);
+</script>
 </body>
 </html>
