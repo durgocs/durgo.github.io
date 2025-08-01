@@ -6,6 +6,22 @@
     <title>দুর্গ - শক্তি, সুরক্ষা ও প্রতিরক্ষা</title>
     <link href="https://fonts.googleapis.com/css2?family=SolaimanLipi&display=swap" rel="stylesheet">
     <style>
+
+     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_BUCKET.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+</head>
         /* Reset and Base Styles */
         * {
             margin: 0;
@@ -579,10 +595,34 @@
             alert('আপনার রিপোর্ট সফলভাবে জমা হয়েছে। ধন্যবাদ!');
         });
         
-        function saveReport(report) {
-            let reports = JSON.parse(localStorage.getItem('durgoReports')) || [];
-            reports.unshift(report); // Add new report at the beginning
-            localStorage.setItem('durgoReports', JSON.stringify(reports));
+       async function saveReport(report) {
+  await db.collection("reports").add(report);
+}
+
+async function loadReports() {
+  const snapshot = await db.collection("reports").orderBy("date", "desc").get();
+  const reportsList = document.getElementById('reportsList');
+  reportsList.innerHTML = '';
+
+  snapshot.forEach(doc => {
+    const report = doc.data();
+    const reportItem = document.createElement('div');
+    reportItem.className = 'report-item';
+    reportItem.innerHTML = `
+      <div class="report-meta">
+        <span>${report.name}</span>
+        <span>${new Date(report.date).toLocaleString('bn-BD')}</span>
+      </div>
+      <div class="report-meta">
+        <span>ফোন: ${report.phone}</span>
+      </div>
+      <div class="report-content">
+        <p>${report.description}</p>
+      </div>
+    `;
+    reportsList.appendChild(reportItem);
+  });
+}
         }
         
         // Admin Login
