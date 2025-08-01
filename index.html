@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>দুর্গ - শক্তি, সুরক্ষা ও প্রতিরক্ষা</title>
     <link href="https://fonts.googleapis.com/css2?family=SolaimanLipi&display=swap" rel="stylesheet">
-    <style>
-	
-	 <!-- 🔥 ADD FIREBASE HERE (before </head>) -->
+    
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     <script>
       const firebaseConfig = {
-         apiKey: "AIzaSyBs8HHINC0M9aIOKPUSMsyNl0EIg5CFXbg",
-         authDomain: "durgo-98db3.firebaseapp.com",
-         projectId: "durgo-98db3",
-         storageBucket: "durgo-98db3.firebasestorage.app",
-         messagingSenderId: "555229795402",
-         appId: "1:555229795402:web:297210e199b5e3e7a282b3",
-         measurementId: "G-27E5YLLTB6"
+        apiKey: "AIzaSyBs8HHINC0M9aIOKPUSMsyNl0EIg5CFXbg",
+        authDomain: "durgo-98db3.firebaseapp.com",
+        projectId: "durgo-98db3",
+        storageBucket: "durgo-98db3.firebasestorage.app",
+        messagingSenderId: "555229795402",
+        appId: "1:555229795402:web:297210e199b5e3e7a282b3",
+        measurementId: "G-27E5YLLTB6"
       };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.firestore();
     </script>
-</head>
+
+    <style>
         /* Reset and Base Styles */
         * {
             margin: 0;
@@ -552,21 +552,16 @@
     <script>
         // Navigation Functionality with Smooth Scrolling
         function navigate(pageId) {
-            // Hide all pages
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
             });
-            
-            // Show the selected page
             const targetPage = document.getElementById(pageId);
             targetPage.classList.add('active');
-            
-            // Smooth scroll to the page
             targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-        
+
         // Report Form Handling
-        document.getElementById('reportForm').addEventListener('submit', function(e) {
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const name = document.getElementById('name').value;
@@ -578,101 +573,88 @@
                 return;
             }
             
-            // Create report object
-            const report = {
-                id: Date.now(),
-                name: name || 'Anonymous',
-                phone: phone || 'Not provided',
-                description,
-                date: new Date().toLocaleString('bn-BD')
-            };
-            
-            // Save to localStorage
-            saveReport(report);
-            
-            // Reset form
-            this.reset();
-            
-            // Show success message
-            alert('আপনার রিপোর্ট সফলভাবে জমা হয়েছে। ধন্যবাদ!');
+            try {
+                await db.collection("reports").add({
+                    name: name || 'Anonymous',
+                    phone: phone || 'Not provided',
+                    description,
+                    date: firebase.firestore.FieldValue.serverTimestamp() // Use server timestamp
+                });
+                
+                this.reset();
+                alert('আপনার রিপোর্ট সফলভাবে জমা হয়েছে। ধন্যবাদ!');
+            } catch (error) {
+                console.error("Error saving report:", error);
+                alert('রিপোর্ট জমা দিতে সমস্যা হয়েছে। পরে আবার চেষ্টা করুন।');
+            }
         });
-        
-        async function saveReport(report) {
-  await db.collection("reports").add(report);
-}
 
-async function loadReports() {
-  const snapshot = await db.collection("reports").orderBy("date", "desc").get();
-  const reportsList = document.getElementById('reportsList');
-  reportsList.innerHTML = '';
-
-  snapshot.forEach(doc => {
-    const report = doc.data();
-    const reportItem = document.createElement('div');
-    reportItem.className = 'report-item';
-    reportItem.innerHTML = `
-      <div class="report-meta">
-        <span>${report.name}</span>
-        <span>${new Date(report.date).toLocaleString('bn-BD')}</span>
-      </div>
-      <div class="report-meta">
-        <span>ফোন: ${report.phone}</span>
-      </div>
-      <div class="report-content">
-        <p>${report.description}</p>
-      </div>
-    `;
-    reportsList.appendChild(reportItem);
-  });
-}
-        
         // Admin Login
-        document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+        document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             
             if (username === 'durgoadmin' && password === 'everyonebesupporter') {
-                // Show admin panel
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('adminPanel').style.display = 'block';
-                
-                // Load reports
-                loadReports();
+                try {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('adminPanel').style.display = 'block';
+                    await loadReports();
+                } catch (error) {
+                    console.error("Error loading reports:", error);
+                    alert('রিপোর্ট লোড করতে সমস্যা হয়েছে');
+                }
             } else {
                 alert('ভুল ব্যবহারকারীর নাম বা পাসওয়ার্ড!');
             }
         });
         
-        function loadReports() {
-            const reports = JSON.parse(localStorage.getItem('durgoReports')) || [];
+        // Load Reports from Firebase
+        async function loadReports() {
             const reportsList = document.getElementById('reportsList');
+            reportsList.innerHTML = '<p>রিপোর্ট লোড হচ্ছে...</p>';
             
-            if (reports.length === 0) {
-                reportsList.innerHTML = '<p>কোনো রিপোর্ট পাওয়া যায়নি</p>';
-                return;
+            try {
+                const snapshot = await db.collection("reports")
+                    .orderBy("date", "desc")
+                    .get();
+                
+                if (snapshot.empty) {
+                    reportsList.innerHTML = '<p>কোনো রিপোর্ট পাওয়া যায়নি</p>';
+                    return;
+                }
+                
+                reportsList.innerHTML = '';
+                
+                snapshot.forEach(doc => {
+                    const report = doc.data();
+                    const reportItem = document.createElement('div');
+                    reportItem.className = 'report-item';
+                    
+                    // Format the date properly
+                    const reportDate = report.date ? 
+                        new Date(report.date.seconds * 1000).toLocaleString('bn-BD') : 
+                        'তারিখ নেই';
+                    
+                    reportItem.innerHTML = `
+                        <div class="report-meta">
+                            <span>${report.name}</span>
+                            <span>${reportDate}</span>
+                        </div>
+                        <div class="report-meta">
+                            <span>ফোন: ${report.phone}</span>
+                        </div>
+                        <div class="report-content">
+                            <p>${report.description}</p>
+                        </div>
+                    `;
+                    reportsList.appendChild(reportItem);
+                });
+            } catch (error) {
+                console.error("Error loading reports:", error);
+                reportsList.innerHTML = '<p>রিপোর্ট লোড করতে ব্যর্থ হয়েছে</p>';
             }
-            
-            reportsList.innerHTML = '';
-            
-            reports.forEach(report => {
-                const reportItem = document.createElement('div');
-                reportItem.className = 'report-item';
-                reportItem.innerHTML = `
-                    <div class="report-meta">
-                        <span>${report.name}</span>
-                        <span>${report.date}</span>
-                    </div>
-                    <div class="report-meta">
-                        <span>ফোন: ${report.phone}</span>
-                    </div>
-                    <div class="report-content">
-                        <p>${report.description}</p>
-                    </div>
-                `;
-                reportsList.appendChild(reportItem);
-            });
         }
         
         function logout() {
