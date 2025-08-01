@@ -562,51 +562,56 @@
 
     // Report Form Handling - IMPROVED VERSION
     document.getElementById('reportForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('.submit-btn');
+    const originalBtnText = submitBtn.textContent;
+    
+    try {
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
         
-        const name = document.getElementById('name').value;
-        const phone = document.getElementById('phone').value;
-        const description = document.getElementById('description').value;
-        
-        if (!description) {
-            alert('Please fill in the incident description');
-            return;
+        // Get form values
+        const reportData = {
+            name: document.getElementById('name').value || 'Anonymous',
+            phone: document.getElementById('phone').value || 'Not provided',
+            description: document.getElementById('description').value,
+            date: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (!reportData.description) {
+            throw new Error('Description is required');
         }
+
+        console.log("Attempting to submit:", reportData);
         
-        try {
-            // Show loading state
-            const submitBtn = this.querySelector('.submit-btn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-            
-            // Debug log
-            console.log("Attempting to submit report to Firestore");
-            
-            // Add report to Firestore
-            const docRef = await db.collection("reports").add({
-                name: name || 'Anonymous',
-                phone: phone || 'Not provided',
-                description,
-                date: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            
-            console.log("Report submitted with ID: ", docRef.id);
-            
-            // Reset form and show success
-            this.reset();
-            alert('Report submitted successfully!');
-        } catch (error) {
-            console.error("Full error details:", error);
-            alert(`Failed to submit report. Error: ${error.message}\n\nCheck console for details`);
-        } finally {
-            // Reset button state
-            const submitBtn = this.querySelector('.submit-btn');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit Report';
-            }
+        // Submit to Firestore with timeout
+        const submissionPromise = db.collection("reports").add(reportData);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Submission timeout')), 10000));
+        
+        const docRef = await Promise.race([submissionPromise, timeoutPromise]);
+        console.log("Submitted with ID:", docRef.id);
+        
+        // Reset form
+        this.reset();
+        alert('Report submitted successfully!');
+        
+    } catch (error) {
+        console.error("Submission error:", error);
+        alert(`Submission failed: ${error.message}\nCheck console for details`);
+        
+        // Additional debugging for Firestore errors
+        if (error.code) {
+            console.log("Firestore error code:", error.code);
+            console.log("Firestore error details:", error.details);
         }
-    });
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+    }
+});
 
     // Admin Login - IMPROVED VERSION
     document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
