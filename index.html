@@ -6,8 +6,9 @@
     <title>দুর্গ - শক্তি, সুরক্ষা ও প্রতিরক্ষা</title>
     <link href="https://fonts.googleapis.com/css2?family=SolaimanLipi&display=swap" rel="stylesheet">
     <style>
-
-     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+	
+	 <!-- 🔥 ADD FIREBASE HERE (before </head>) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     <script>
       const firebaseConfig = {
@@ -398,7 +399,7 @@
         <div id="home" class="page active">
             <div class="home-page">
                 <h2 class="page-title">স্বাগতম দুর্গে</h2>
-                <p>জাতীয় শিশু হেল্পলাইন এ কল করুন যেকোনো শিশু নির্যাতনের ঘটনায় । যেকোনো সমস্যায় প্রথমে এখানে কল দিন: জাতীয় শিশু হেল্পলাইন - ১০৯৮ | আমরা আপনার পাশে আছি।</p>
+                <p>জাতীয় শিশু হেল্পলাইন এ কল করুন যেকোনো শিশু নির্যাতনের ঘটনায় । যেকোনো সমস্যায় প্রথমে এখানে কল দিন: জাতীয় শিশু হেল্পলাইন | আমরা আপনার পাশে আছি।</p>
             </div>
         </div>
         
@@ -595,7 +596,7 @@
             alert('আপনার রিপোর্ট সফলভাবে জমা হয়েছে। ধন্যবাদ!');
         });
         
-       async function saveReport(report) {
+        async function saveReport(report) {
   await db.collection("reports").add(report);
 }
 
@@ -623,7 +624,6 @@ async function loadReports() {
     reportsList.appendChild(reportItem);
   });
 }
-        }
         
         // Admin Login
         document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
